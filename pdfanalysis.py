@@ -1,12 +1,13 @@
 import os
 from langchain_openai import OpenAI
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import streamlit as st
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_openai.embeddings import OpenAIEmbeddings
 from langchain_openai.chat_models import ChatOpenAI
-from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores import DocArrayInMemorySearch
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from langchain.prompts import ChatPromptTemplate
@@ -23,21 +24,15 @@ def get_pdf_text(pdf_docs):
 
 # Turns raw text into chunks
 def get_text_chunks(raw_text):
-    text_splitter = CharacterTextSplitter(
-        separator="\n",
-        chunk_size=100,
-        chunk_overlap=50,
-        length_function=len
-    )
-    chunks = text_splitter.split_text(raw_text)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size = 1000, chunk_overlap=20)
+    chunks = text_splitter.split_text(raw_text)[:5]
     return chunks
 
 # Adds chunks to vector store
 def get_vectorstore(text_chunks):
     embeddings = OpenAIEmbeddings()
-    vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
+    vectorstore = DocArrayInMemorySearch.from_texts(text_chunks, embeddings)
     return vectorstore
-
 
 def get_conversation_chain(vectorstore):
     llm = ChatOpenAI()
@@ -50,26 +45,31 @@ def get_conversation_chain(vectorstore):
     return conversation_chain
 
 # Generates Practice Problems
-def generate_practice_problems(notes_raw_text, samples_raw_text, model):
+def generate_practice_problems(notesVS, samplesVS, model):
     parser = StrOutputParser()
     template = """
         You are a tutor creating a practice exam for your students. Your goal is to generate 5 practice problems
-        based on the given context of the exam below.
+        based on the given context of the exam below and follow the similar format of the pratice exam format below.
 
         Context: {context}
         Format: {format}
     """
     prompt = ChatPromptTemplate.from_template(template)
-    chain = prompt | model | parser
-    st.write(chain.invoke({
-        "context": notes_raw_text,
-        "format": samples_raw_text
-    }))
+    chain = (
+        {"context": notesVS.as_retriever(), "format": samplesVS.as_retriever()}
+        | prompt 
+        | model 
+        | parser
+    )
+    st.write(chain.invoke(""))
 
+notesVS = None
+samplesVS = None
 def main():
+    global notesVS, samplesVS
     load_dotenv()
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-3.5-turbo")
+    model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4-turbo-preview")
     st.set_page_config(page_title="Create Practice Problems", page_icon=":books:")
     st.header("Create Practice Problems :books:")
     with st.sidebar:
@@ -78,24 +78,22 @@ def main():
             "Upload your Notes and Lectures", accept_multiple_files=True)
         samples_docs = st.file_uploader(
             "Upload, if any, past exams or practice exams", accept_multiple_files=True)
-        if st.button("Process"):
-            with st.spinner("Processing"): 
+        #if st.button("Process"):
+            #with st.spinner("Processing"): 
                 # Gets pdf texts
-                notes_raw_text = get_pdf_text(notes_docs)
-                # Gets pdf texts
-                samples_raw_text = get_pdf_text(samples_docs)
+        notes_raw_text = get_pdf_text(notes_docs)
+        samples_raw_text = get_pdf_text(samples_docs)
                 # Gets text chunks
-                # text_chunks = get_text_chunks(raw_text)
-
+        notes_chunks = get_text_chunks(notes_raw_text)
+        samples_chunks = get_text_chunks(samples_raw_text)
                 # Creates vector store using embeddings
-                # vectorstore = get_vectorstore(text_chunks)
-
+        notesVS = get_vectorstore(notes_chunks)
+        samplesVS = get_vectorstore(samples_chunks)
                 # Create conversation chain
-                # st.session_state.conversation = get_conversation_chain(vectorstore)
-    notes_raw_text = get_pdf_text(notes_docs)
-    samples_raw_text = get_pdf_text(samples_docs)
+                # st.session_state.notesConvo = get_conversation_chain(notesVS)
+                # st.session_state.samplesConvo = get_conversation_chain(samplesVS)      
     if st.button("Generate Practice Problems"):
-        generate_practice_problems(notes_raw_text, samples_raw_text, model)
+        generate_practice_problems(notesVS, samplesVS, model)
 
 if __name__ == '__main__':
     main()
