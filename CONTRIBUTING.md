@@ -42,6 +42,7 @@ To get started with StudyGen.ai locally, follow these steps
    pip install python-dotenv
    pip install PyPDF2
    pip install langchain
+   pip install docarray
    ```
 
 8. Run the program with
