@@ -26,10 +26,22 @@ To get started with StudyGen.ai locally, follow these steps
 
 6. Copy and paste variables: OPENAI_API_KEY = (Enter your OpenAi key here)
 
-7. Install all required packages
+7A. Create a virtual environment
 
    ```sh
-   pip install langchain_openai, langchain_text_splitters, streamlit, python-dotenv, PyPDF2, langchain
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+7B. Install all required packages
+
+   ```sh
+   pip install langchain-openai
+   pip install langchain_text_splitters
+   pip install streamlit
+   pip install python-dotenv
+   pip install PyPDF2
+   pip install langchain
    ```
 
 8. Run the program with
