@@ -18,7 +18,7 @@ Generate Practice Problems: Click the "Generate Practice Problems" button to aut
 
 **Contributions**
 
-Contributions to this project are welcomed and appreciated. If you wish to contribute, please follow the guidelines outlined in the project repository. Before making any contributions, make sure to review the project's goals and objectives to ensure alignment.
+Contributions to this project are welcomed and appreciated. If you wish to contribute, please head other to [CONTRIBUTIONS](https://github.com/brandonwong10/StudyGen.ai/blob/main/CONTRIBUTING.md).
 
 **Project Goals**
 The primary goals of this project include:
