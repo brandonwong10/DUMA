@@ -36,13 +36,7 @@ To get started with StudyGen.ai locally, follow these steps
 7B. Install all required packages
 
    ```sh
-   pip install langchain-openai
-   pip install langchain_text_splitters
-   pip install streamlit
-   pip install python-dotenv
-   pip install PyPDF2
-   pip install langchain
-   pip install docarray
+   pip install -r requirements.txt
    ```
 
 8. Run the program with
