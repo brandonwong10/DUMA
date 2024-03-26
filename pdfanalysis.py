@@ -1,5 +1,4 @@
 import os  # Importing OS module for environment variables
-from langchain_openai import OpenAI  # Importing OpenAI module
 from langchain_text_splitters import RecursiveCharacterTextSplitter  # Importing RecursiveCharacterTextSplitter for text splitting
 import streamlit as st  # Importing Streamlit for creating web applications\
 from dotenv import load_dotenv  # Importing load_dotenv for loading environment variables
@@ -105,6 +104,7 @@ def main():
     if "difficulty" not in st.session_state:
         st.session_state.difficulty = None
     with st.sidebar:
+        st.title("StudyGen.ai")
         st.session_state.openaiKey = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
         "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
         st.link_button("Give Feedback :arrow_right:", "https://docs.google.com/forms/d/e/1FAIpQLSefz8m7lbE1Q7Fm_iOWw4yDkrN7PSSX_2V9yyJYnJkeg2rXDg/viewform?usp=sf_link")
