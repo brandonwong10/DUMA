@@ -1,0 +1,11 @@
+langchain==0.1.12
+langchain-community==0.0.28
+langchain-core==0.1.32
+langchain-openai==0.0.8
+langchain-pinecone==0.0.3
+langchain-text-splitters==0.0.1
+streamlit==1.32.2
+PyPDF2==3.0.1
+streamlit-shadcn-ui==0.1.18
+python-dotenv==1.0.1
+docarray==0.32.1

@@ -12,7 +12,7 @@ from langchain_core.output_parsers import StrOutputParser  # Importing StrOutput
 from langchain_core.runnables import RunnablePassthrough  # Importing RunnablePassthrough for running tasks
 from htmlTemplates import css, bot_template  # Importing CSS and bot_template HTML templates
 import streamlit_shadcn_ui as ui
-from auth import *
+#from auth import *
 
 
 # Turns PDF into raw text
