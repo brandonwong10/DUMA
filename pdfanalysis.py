@@ -1,8 +1,8 @@
 import os  # Importing OS module for environment variables
 #from langchain_openai import OpenAI  # Importing OpenAI module
+from dotenv import load_dotenv  # Importing load_dotenv for loading environment variables
 from langchain_text_splitters import RecursiveCharacterTextSplitter  # Importing RecursiveCharacterTextSplitter for text splitting
 import streamlit as st  # Importing Streamlit for creating web applications\
-from dotenv import load_dotenv  # Importing load_dotenv for loading environment variables
 from PyPDF2 import PdfReader  # Importing PdfReader for reading PDF files
 from langchain_openai.embeddings import OpenAIEmbeddings  # Importing OpenAIEmbeddings for embeddings
 from langchain_openai.chat_models import ChatOpenAI  # Importing ChatOpenAI for chat models
