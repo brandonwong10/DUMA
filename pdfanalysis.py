@@ -61,6 +61,7 @@ def generate_practice_problems(notesVS, samplesVS, model, number, diff):
     )
     with st.spinner("Creating Problems"):
         problems = chain1.invoke(diff_str)
+        st.header("Practice Problems:")
         st.write(problems)
     template2 = """
         You are an instructor preparing an answer key for the questions provided below. 
@@ -80,11 +81,12 @@ def generate_practice_problems(notesVS, samplesVS, model, number, diff):
     )
     with st.spinner("Creating Solutions"):
         answers = chain2.invoke(problems)
+        st.header("Answer Key:")
         st.write(answers)
 
 def main():
     load_dotenv()  # Loading environment variables
-    st.set_page_config(page_title="Create Practice Problems", page_icon=":books:")  # Configuring page title and icon
+    st.set_page_config(page_title="Generate Practice Problems Using Ai", page_icon=":sparkles:")  # Configuring page title and icon
     st.write(css, unsafe_allow_html=True)  # Writing CSS template
     # Checking if session variables exist, if not, initializing them
     if "notesVS" not in st.session_state:
@@ -105,12 +107,13 @@ def main():
         "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
         st.link_button("Give Feedback :arrow_right:", "https://docs.google.com/forms/d/e/1FAIpQLSefz8m7lbE1Q7Fm_iOWw4yDkrN7PSSX_2V9yyJYnJkeg2rXDg/viewform?usp=sf_link")
     OPENAI_API_KEY = st.session_state.openaiKey  # Retrieving OpenAI API key
-    model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4-turbo-preview")  # Initializing OpenAI chat model
+    #model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4-turbo-preview")  # Initializing OpenAI chat model
     st.header("Create Practice Problems :book:")  # Writing header
+    st.write("Our program generates practice problems using the context you provide, simulating problems that may be on the exam. The more context provide, the better the results!")
     cols = st.columns(2)
     with cols[0]:
         notes_docs = st.file_uploader(
-            "Upload your Notes and Lectures", accept_multiple_files=True)  # Uploader for notes and lectures
+            "Upload your Notes and Lectures in PDF form", accept_multiple_files=True)  # Uploader for notes and lectures
         if notes_docs is not None and any(len(doc.getvalue()) > 0 for doc in notes_docs):
             with st.spinner("Processing"):
                 notes_raw_text = get_pdf_text(notes_docs)
@@ -118,7 +121,7 @@ def main():
                 st.session_state.notesVS = get_vectorstore(notes_chunks)
     with cols[1]:
             samples_docs= st.file_uploader(
-            "Upload, if any, past exams or practice exams", accept_multiple_files=True)
+            "Upload past exams or practice exams in PDF form", accept_multiple_files=True)
             if notes_docs is not None and any(len(doc.getvalue()) > 0 for doc in notes_docs):
                 with st.spinner("Processing"): 
                     samples_raw_text = get_pdf_text(samples_docs)
@@ -135,7 +138,12 @@ def main():
         elif st.session_state.samplesVS is None:
            ui.alert_dialog(show=generate_btn, title="Missing Samples", description="Please attach a exam sample file", confirm_label="OK", cancel_label="Cancel", key="alert_dialog_2")
         else:
-            generate_practice_problems(st.session_state.notesVS, st.session_state.samplesVS, model, st.session_state.num, st.session_state.difficulty)
+            try:
+                model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-3.5-turbo-0125")
+                generate_practice_problems(st.session_state.notesVS, st.session_state.samplesVS, model, st.session_state.num, st.session_state.difficulty)
+            except Exception as e:
+                st.error("Invalid OpenAI API key. Please check your API key and try again.")
+                st.stop()
 
             
 if __name__ == '__main__':
