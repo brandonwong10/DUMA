@@ -89,6 +89,10 @@ def main():
     st.set_page_config(page_title="Generate Practice Problems Using Ai", page_icon=":sparkles:")  # Configuring page title and icon
     st.write(css, unsafe_allow_html=True)  # Writing CSS template
     # Checking if session variables exist, if not, initializing them
+    if "notes_docs" not in st.session_state:
+        st.session_state.notes_docs = None
+    if "samples_docs" not in st.session_state:
+        st.session_state.samples_docs = None
     if "notesVS" not in st.session_state:
         st.session_state.notesVS = None
     if "samplesVS" not in st.session_state:
@@ -112,21 +116,19 @@ def main():
     st.write("Our program generates practice problems using the context you provide, simulating problems that may be on the exam. The more context provide, the better the results!")
     cols = st.columns(2)
     with cols[0]:
-        notes_docs = st.file_uploader(
+        st.session_state.notes_docs = st.file_uploader(
             "Upload your Notes and Lectures in PDF form", accept_multiple_files=True)  # Uploader for notes and lectures
-        if notes_docs is not None and any(len(doc.getvalue()) > 0 for doc in notes_docs):
-            with st.spinner("Processing"):
-                notes_raw_text = get_pdf_text(notes_docs)
-                notes_chunks = get_text_chunks(notes_raw_text)
-                st.session_state.notesVS = get_vectorstore(notes_chunks)
     with cols[1]:
-            samples_docs= st.file_uploader(
+            st.session_state.samples_docs= st.file_uploader(
             "Upload past exams or practice exams in PDF form", accept_multiple_files=True)
-            if notes_docs is not None and any(len(doc.getvalue()) > 0 for doc in notes_docs):
-                with st.spinner("Processing"): 
-                    samples_raw_text = get_pdf_text(samples_docs)
-                    samples_chunks = get_text_chunks(samples_raw_text)
-                    st.session_state.samplesVS = get_vectorstore(samples_chunks)
+    if st.button("Process Documents"):
+        with st.spinner("Processing"): 
+            notes_raw_text = get_pdf_text(st.session_state.notes_docs)
+            notes_chunks = get_text_chunks(notes_raw_text)
+            st.session_state.notesVS = get_vectorstore(notes_chunks)
+            samples_raw_text = get_pdf_text(st.session_state.samples_docs)
+            samples_chunks = get_text_chunks(samples_raw_text)
+            st.session_state.samplesVS = get_vectorstore(samples_chunks)
     st.session_state.difficulty = st.radio('Pick a difficulty:', ['Easy','Medium',"Hard"])
     generate_btn = st.button("Generate Practice Problems")
     if generate_btn:  # Button for generating practice problems
