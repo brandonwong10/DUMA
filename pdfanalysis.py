@@ -129,18 +129,17 @@ def main():
     if st.button("Processing youtube"):
         with st.spinner("Processing"): 
             # Let's do this only if we haven't created the transcription file yet.
-            if not os.path.exists("transcription.txt"):
-                whisper_model = whisper.load_model("base")
-                # Initialize the YouTube object with the provided URL
-                youtube = YouTube("https://www.youtube.com/watch?v=SOjSNB7F2m4&t=167s")
-                audio = youtube.streams.filter(only_audio=True).first()
-                file = audio.download()
+            youtube = YouTube(st.session_state.yt_link)
+            audio = youtube.streams.filter(only_audio=True).first()
+            whisper_model = whisper.load_model("base")
+            with tempfile.TemporaryDirectory() as tmpdir:
+                temp = tempfile.TemporaryFile()
+                temp = audio.download(output_path=tmpdir)
                 # Use the Whisper model to transcribe the video
-                st.session_state.transcribed_text = whisper_model.transcribe(file, fp16=False)["text"].strip()
-                # Delete the downloaded video file
-                if os.path.exists(file):
-                    os.remove(file)
+                st.session_state.transcribed_text = whisper_model.transcribe(temp, fp16=False)["text"].strip()
+                # Return the transcript as a string
                 st.write(st.session_state.transcribed_text)
+                return st.session_state.transcribed_text
     if st.button("Process Documents"):
         with st.spinner("Processing"): 
             notes_raw_text = get_pdf_text(st.session_state.notes_docs)

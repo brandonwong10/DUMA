@@ -9,6 +9,9 @@ from langchain.prompts import ChatPromptTemplate  # Importing ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough  # Importing RunnablePassthrough for running tasks
 from langchain_openai.chat_models import ChatOpenAI  # Importing ChatOpenAI for chat models
 from openai import OpenAI
+import tempfile
+import whisper
+from pytube import YouTube
 import os
 
 import flask
@@ -22,10 +25,42 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+@app.route('/uploadYoutube', methods=['POST'])
+def upload_youtube():
+    # Check if the request has the 'youtube_link' parameter
+    if 'youtube_link' not in request.form:
+        return jsonify({'error': 'No YouTube link provided'}), 400
+    youtube_link = request.form['youtube_link']
+    # Check if the provided link is a valid YouTube link
+    if not is_valid_youtube_link(youtube_link):
+        return jsonify({'error': 'Invalid YouTube link provided'}), 400
+    try:
+        youtube = YouTube(youtube_link)
+        audio = youtube.streams.filter(only_audio=True).first()
+        whisper_model = whisper.load_model("base")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_file_path = os.path.join(tmpdir, 'audio.mp4')
+            audio.download(output_path=tmpdir)     
+            # Use the Whisper model to transcribe the video
+            transcribed_text = whisper_model.transcribe(temp_file_path, fp16=False)["text"].strip()
+            db = dbcontroller.DBController()
+            resourceId = request.args.get("resourceId")
+            db.set_context(resourceId, transcribed_text)
+            db.set_style(resourceId, "Bullet Points")
+        return jsonify({'message': 'YouTube video uploaded and transcribed successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def is_valid_youtube_link(link):
+    # Check if the link starts with 'https://www.youtube.com/' and contains 'watch?v='
+    if link.startswith('https://www.youtube.com/') and 'watch?v=' in link:
+        return True
+    return False
+    
+
 # TODO: read resourceId from user
 @app.route('/uploadFile', methods=['POST'])
 def upload_file():
-    client = OpenAI()
     print("upload_file")
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
@@ -37,12 +72,10 @@ def upload_file():
         filename = file.filename
         path = os.path.join(app.config['UPLOAD_FOLDER'], filename);
         file.save(path)
-        transcription = client.audio.transcriptions.create(model="whisper-1", file=path, response_format="text")
         notes_raw_text = get_pdf_text(path)
         db = dbcontroller.DBController();
         resourceId = request.args.get("resourceId");
         db.set_context(resourceId, notes_raw_text);
-        
         db.set_style(resourceId, "Bullet Points")
         return jsonify({'message': 'File uploaded successfully', 'filename': filename})
     else:
@@ -58,14 +91,11 @@ def getNotes():
     resourceId = request.args.get("resourceId");
     raw_text = db.get_context(resourceId)
     str_text = str(raw_text)
-    print(str_text)
     notes_chunks = get_text_chunks(str_text)
     notes_vs = get_vectorstore(notes_chunks)
     style = db.get_style(resourceId)
     notes = generate_notes(notes_vs, style, model)
     return jsonify({'message': notes})
-
-
 
 
 @app.route('/')
