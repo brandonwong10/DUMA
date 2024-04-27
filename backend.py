@@ -60,13 +60,7 @@ def is_valid_youtube_link(link):
 def upload_audio():
     whisper_model = whisper.load_model("base")
     load_dotenv()  # Loading environment variables
-    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-    client = OpenAI(api_key=OPENAI_API_KEY)
-    # Check if the request has the 'file' parameter
-    #if 'file' not in request.files:
-        #return jsonify({'error': 'No file part'}), 400
     audio_file = request.files['file']
-    # Check if a file is selected
     if audio_file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     try:
@@ -95,13 +89,25 @@ def upload_file():
         path = os.path.join(app.config['UPLOAD_FOLDER'], filename);
         file.save(path)
         notes_raw_text = get_pdf_text(path)
-        db = dbcontroller.DBController();
         resourceId = request.args.get("resourceId");
         set_context_by_resourceid(resourceId, notes_raw_text);
         set_style_by_resourceid(resourceId, "Bullet Points")
         return jsonify({'message': 'File uploaded successfully', 'filename': filename})
     else:
         return jsonify({'error': 'File upload failed'}), 500
+
+@app.route('/getNotes', methods=['GET'])
+def getAnswer():
+    print("asdfdas")
+    user_question = request.args.get("question")
+    resourceId = request.args.get("resourceId");
+    raw_text = get_context_by_resourceid(resourceId)
+    str_text = str(raw_text)
+    text_chunks = get_text_chunks(str_text)
+    vectorstore = get_vectorstore(text_chunks)
+    conversation = get_conversation_chain(vectorstore)
+    answer = handle_userinput(user_question, conversation)
+    return jsonify({'message': answer}) 
 
 @app.route('/getNotes', methods=['GET'])
 def getNotes():
@@ -187,6 +193,11 @@ def get_conversation_chain(vectorstore):
         memory=memory
     )
     return conversation_chain
+
+def handle_userinput(user_question, conversation):
+    response = conversation({'question': user_question})
+    ai_response = response['chat_history'][-1].content
+    return ai_response
 
 
 
