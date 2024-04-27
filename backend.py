@@ -13,6 +13,7 @@ import tempfile
 import whisper
 from pytube import YouTube
 import os
+from control import *
 
 import flask
 from flask import Flask, request, jsonify
@@ -28,9 +29,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 @app.route('/uploadYoutube', methods=['POST'])
 def upload_youtube():
     # Check if the request has the 'youtube_link' parameter
-    if 'youtube_link' not in request.form:
-        return jsonify({'error': 'No YouTube link provided'}), 400
-    youtube_link = request.form['youtube_link']
+    youtube_link = request.args.get("yt")
     # Check if the provided link is a valid YouTube link
     if not is_valid_youtube_link(youtube_link):
         return jsonify({'error': 'Invalid YouTube link provided'}), 400
@@ -39,10 +38,10 @@ def upload_youtube():
         audio = youtube.streams.filter(only_audio=True).first()
         whisper_model = whisper.load_model("base")
         with tempfile.TemporaryDirectory() as tmpdir:
-            temp_file_path = os.path.join(tmpdir, 'audio.mp4')
-            audio.download(output_path=tmpdir)     
+            temp = tempfile.TemporaryFile()
+            temp = audio.download(output_path=tmpdir)
             # Use the Whisper model to transcribe the video
-            transcribed_text = whisper_model.transcribe(temp_file_path, fp16=False)["text"].strip()
+            transcribed_text = whisper_model.transcribe(temp, fp16=False)["text"].strip()
             db = dbcontroller.DBController()
             resourceId = request.args.get("resourceId")
             db.set_context(resourceId, transcribed_text)
@@ -56,16 +55,36 @@ def is_valid_youtube_link(link):
     if link.startswith('https://www.youtube.com/') and 'watch?v=' in link:
         return True
     return False
-    
+
+@app.route('/uploadAudio', methods=['POST'])
+def upload_audio():
+    load_dotenv()  # Loading environment variables
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+    client = OpenAI(api_key=OPENAI_API_KEY)
+    # Check if the request has the 'file' parameter
+    #if 'file' not in request.files:
+        #return jsonify({'error': 'No file part'}), 400
+    audio_file = request.files['file']
+    # Check if a file is selected
+    if audio_file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    try:
+        transcription = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
+        db = dbcontroller.DBController()
+        resourceId = request.args.get("resourceId")
+        db.set_context(resourceId, transcription)
+        db.set_style(resourceId, "Bullet Points")
+        return jsonify({'message': 'Audio file uploaded and transcribed successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # TODO: read resourceId from user
 @app.route('/uploadFile', methods=['POST'])
 def upload_file():
     print("upload_file")
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
+    #if 'file' not in request.files:
+        #return jsonify({'error': 'No file part'}), 400
     file = request.files['file']
-    print(file)
     if file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     if file:
@@ -75,8 +94,8 @@ def upload_file():
         notes_raw_text = get_pdf_text(path)
         db = dbcontroller.DBController();
         resourceId = request.args.get("resourceId");
-        db.set_context(resourceId, notes_raw_text);
-        db.set_style(resourceId, "Bullet Points")
+        set_context_by_resourceid(resourceId, notes_raw_text);
+        set_style_by_resourceid(resourceId, "Bullet Points")
         return jsonify({'message': 'File uploaded successfully', 'filename': filename})
     else:
         return jsonify({'error': 'File upload failed'}), 500
