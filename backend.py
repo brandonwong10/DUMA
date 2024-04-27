@@ -14,7 +14,6 @@ import whisper
 from pytube import YouTube
 import os
 from control import *
-
 import flask
 from flask import Flask, request, jsonify
 import dbcontroller
@@ -44,7 +43,7 @@ def upload_youtube():
             transcribed_text = whisper_model.transcribe(temp, fp16=False)["text"].strip()
             resourceId = request.args.get("resourceId")
             set_context_by_resourceid(resourceId, transcribed_text);
-        set_style_by_resourceid(resourceId, "Bullet Points")
+            set_style_by_resourceid(resourceId, "Bullet Points")
         return jsonify({'message': 'YouTube video uploaded and transcribed successfully'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -69,10 +68,9 @@ def upload_audio():
         return jsonify({'error': 'No selected file'}), 400
     try:
         transcription = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
-        db = dbcontroller.DBController()
         resourceId = request.args.get("resourceId")
-        db.set_context(resourceId, transcription)
-        db.set_style(resourceId, "Bullet Points")
+        set_context_by_resourceid(resourceId, transcription)
+        set_style_by_resourceid(resourceId, "Bullet Points")
         return jsonify({'message': 'Audio file uploaded and transcribed successfully'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
