@@ -10,3 +10,7 @@ streamlit-shadcn-ui==0.1.18
 python-dotenv==1.0.1
 pydantic==1.10.8
 langchain[docarray]
+whisper
+flask
+pytube
+supabase
