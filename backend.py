@@ -42,10 +42,9 @@ def upload_youtube():
             temp = audio.download(output_path=tmpdir)
             # Use the Whisper model to transcribe the video
             transcribed_text = whisper_model.transcribe(temp, fp16=False)["text"].strip()
-            db = dbcontroller.DBController()
             resourceId = request.args.get("resourceId")
-            db.set_context(resourceId, transcribed_text)
-            db.set_style(resourceId, "Bullet Points")
+            set_context_by_resourceid(resourceId, transcribed_text);
+        set_style_by_resourceid(resourceId, "Bullet Points")
         return jsonify({'message': 'YouTube video uploaded and transcribed successfully'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
