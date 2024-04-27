@@ -10,11 +10,14 @@ from langchain_community.vectorstores import DocArrayInMemorySearch  # Importing
 from langchain.prompts import ChatPromptTemplate  # Importing ChatPromptTemplate for chat prompts
 from langchain_core.output_parsers import StrOutputParser  # Importing StrOutputParser for output parsing
 from langchain_core.runnables import RunnablePassthrough  # Importing RunnablePassthrough for running tasks
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template  # Importing CSS and bot_template HTML templates
 import streamlit_shadcn_ui as ui
 from openai import OpenAI
-from pydub import AudioSegment
-#from auth import *
+import tempfile
+import whisper
+from pytube import YouTube
 
 
 # Turns PDF into raw text
@@ -61,6 +64,29 @@ def generate_notes(contextVS, style, model):
         st.header("Notes:")
         st.write(notes)
 
+def get_conversation_chain(vectorstore):
+    llm = ChatOpenAI()
+    # llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
+
+    memory = ConversationBufferMemory(
+        memory_key='chat_history', return_messages=True)
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=vectorstore.as_retriever(),
+        memory=memory
+    )
+    return conversation_chain
+
+def handle_userinput(user_question):
+    response = st.session_state.conversation({'question': user_question})
+    st.session_state.chat_history = response['chat_history']
+
+    for i, message in enumerate(st.session_state.chat_history):
+        if i % 2 == 0:
+            st.write(message.content)
+        else:
+            st.write(message.content)
+
 def main():
     load_dotenv()  # Loading environment variables
     client = OpenAI()
@@ -79,20 +105,42 @@ def main():
         st.session_state.audioVS = None
     if "audioConvo" not in st.session_state:
         st.session_state.audioConvo = None
+    if "yt_link" not in st.session_state:
+        st.session_state.yt_link = None
+    if "transcribed_text" not in st.session_state:
+        st.session_state.transcribed_text = None 
+    st.session_state.transcribed_text
     with st.sidebar:
         st.title("StudyGen")
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY') # Retrieving OpenAI API key
-    model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4-turbo-preview")  # Initializing OpenAI chat model
+    model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-3.5-turbo-0125")  # Initializing OpenAI chat model
     st.header("Create Notes :book:")  # Writing header
     st.write("Our program generates practice problems using the context you provide, simulating problems that may be on the exam. The more context provide, the better the results!")
-    cols = st.columns(2)
+    cols = st.columns(3)
     with cols[0]:
         st.session_state.notes_docs = st.file_uploader(
             "Upload PDF", accept_multiple_files=True)  # Uploader for notes and lectures
     with cols[1]:
         st.session_state.audio_file= st.file_uploader(
             "Upload Audio File", type=["wav", "mp3", "m4a"])
+    with cols[2]:
+        st.session_state.yt_link = st.text_input("Enter youtube video link", None)
 
+    if st.button("Processing youtube"):
+        with st.spinner("Processing"): 
+            # Let's do this only if we haven't created the transcription file yet.
+            if not os.path.exists("transcription.txt"):
+                whisper_model = whisper.load_model("base")
+                # Initialize the YouTube object with the provided URL
+                youtube = YouTube("https://www.youtube.com/watch?v=SOjSNB7F2m4&t=167s")
+                audio = youtube.streams.filter(only_audio=True).first()
+                file = audio.download()
+                # Use the Whisper model to transcribe the video
+                st.session_state.transcribed_text = whisper_model.transcribe(file, fp16=False)["text"].strip()
+                # Delete the downloaded video file
+                if os.path.exists(file):
+                    os.remove(file)
+                st.write(st.session_state.transcribed_text)
     if st.button("Process Documents"):
         with st.spinner("Processing"): 
             notes_raw_text = get_pdf_text(st.session_state.notes_docs)
@@ -105,7 +153,9 @@ def main():
             #audio_raw_text = get_pdf_text(st.session_state.audio_file)
             #audio_chunks = get_text_chunks(audio_raw_text)
             #st.session_state.audioVS = get_vectorstore(audio_chunks)
-    
+    user_question = st.text_input("Ask a question about your documents:")
+    if user_question:
+        handle_userinput(user_question)
     style = st.text_input("Enter your preferred style", None)
     generate_btn = st.button("Generate Notes")
     if generate_btn:  # Button for generating practice problems
