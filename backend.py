@@ -8,6 +8,8 @@ from langchain_core.output_parsers import StrOutputParser  # Importing StrOutput
 from langchain.prompts import ChatPromptTemplate  # Importing ChatPromptTemplate for chat prompts
 from langchain_core.runnables import RunnablePassthrough  # Importing RunnablePassthrough for running tasks
 from langchain_openai.chat_models import ChatOpenAI  # Importing ChatOpenAI for chat models
+from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationalRetrievalChain
 from openai import OpenAI
 import tempfile
 import whisper
@@ -56,6 +58,7 @@ def is_valid_youtube_link(link):
 
 @app.route('/uploadAudio', methods=['POST'])
 def upload_audio():
+    whisper_model = whisper.load_model("base")
     load_dotenv()  # Loading environment variables
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     client = OpenAI(api_key=OPENAI_API_KEY)
@@ -67,7 +70,10 @@ def upload_audio():
     if audio_file.filename == '':
         return jsonify({'error': 'No selected file'}), 400
     try:
-        transcription = client.audio.transcriptions.create(model="whisper-1", file=audio_file)
+        filename = audio_file.filename
+        path = os.path.join(app.config['UPLOAD_FOLDER'], filename);
+        audio_file.save(path)
+        transcription = whisper_model.transcribe(path, fp16=False)["text"].strip()
         resourceId = request.args.get("resourceId")
         set_context_by_resourceid(resourceId, transcription)
         set_style_by_resourceid(resourceId, "Bullet Points")
@@ -169,6 +175,20 @@ def generate_notes(contextVS, style, model):
     )
     notes = chain1.invoke(style_str)
     return notes
+
+def get_conversation_chain(vectorstore):
+    llm = ChatOpenAI()
+    # llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
+    memory = ConversationBufferMemory(
+        memory_key='chat_history', return_messages=True)
+    conversation_chain = ConversationalRetrievalChain.from_llm(
+        llm=llm,
+        retriever=vectorstore.as_retriever(),
+        memory=memory
+    )
+    return conversation_chain
+
+
 
 
 
