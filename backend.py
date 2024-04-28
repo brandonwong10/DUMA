@@ -127,7 +127,7 @@ def getSumContext():
 def getNotes():
     load_dotenv()  # Loading environment variables
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-    model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4-preview")
+    model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-4-turbo-preview")
     resourceId = request.args.get("resourceId");
     raw_text = get_context_by_resourceid(resourceId)
     str_text = str(raw_text)
