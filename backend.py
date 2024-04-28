@@ -120,9 +120,7 @@ def getSumContext():
     str_text = str(raw_text)
     notes_chunks = get_text_chunks(str_text)
     notes_vs = get_vectorstore(notes_chunks)
-    style = get_style_by_resourceid(resourceId)
-    notes = generate_notes(notes_vs, style, model)
-    sumContext = summarizeContext(notes, model)
+    sumContext = summarizeContext(notes_vs, model)
     return sumContext
 
 @app.route('/getNotes', methods=['GET'])
@@ -206,12 +204,12 @@ def summarizeContext(contextVS, model):
     """
     prompt1 = ChatPromptTemplate.from_template(template1)
     chain1 = (
-        {"context": contextVS.as_retriever() }
+        {"context": contextVS.as_retriever()}
         | prompt1
         | model 
         | parser
     )
-    sumContext = chain1.invoke()
+    sumContext = chain1.invoke("")
     return sumContext
 
 def get_conversation_chain(vectorstore):
