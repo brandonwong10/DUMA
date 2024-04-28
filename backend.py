@@ -110,13 +110,11 @@ def getAnswer():
     answer = handle_userinput(user_question, conversation)
     return answer
 
-@app.route('/getNotes', methods=['GET'])
-def getNotes():
-    print()
+@app.route('/getSumContext', methods=['GET'])
+def getSumContext():
     load_dotenv()  # Loading environment variables
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-3.5-turbo-0125")
-    print("get_notes")
     resourceId = request.args.get("resourceId");
     raw_text = get_context_by_resourceid(resourceId)
     str_text = str(raw_text)
@@ -124,7 +122,21 @@ def getNotes():
     notes_vs = get_vectorstore(notes_chunks)
     style = get_style_by_resourceid(resourceId)
     notes = generate_notes(notes_vs, style, model)
-    print(notes)
+    sumContext = summarizeContext(notes, model)
+    return sumContext
+
+@app.route('/getNotes', methods=['GET'])
+def getNotes():
+    load_dotenv()  # Loading environment variables
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+    model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-3.5-turbo-0125")
+    resourceId = request.args.get("resourceId");
+    raw_text = get_context_by_resourceid(resourceId)
+    str_text = str(raw_text)
+    notes_chunks = get_text_chunks(str_text)
+    notes_vs = get_vectorstore(notes_chunks)
+    style = get_style_by_resourceid(resourceId)
+    notes = generate_notes(notes_vs, style, model)
     return notes
 
 
@@ -185,6 +197,22 @@ def generate_notes(contextVS, style, model):
     )
     notes = chain1.invoke(style_str)
     return notes
+
+def summarizeContext(contextVS, model):
+    parser = StrOutputParser()
+    template1 = """
+        Summarize the given context in one sentence.
+        Context: {context}
+    """
+    prompt1 = ChatPromptTemplate.from_template(template1)
+    chain1 = (
+        {"context": contextVS.as_retriever() }
+        | prompt1
+        | model 
+        | parser
+    )
+    sumContext = chain1.invoke()
+    return sumContext
 
 def get_conversation_chain(vectorstore):
     llm = ChatOpenAI()
