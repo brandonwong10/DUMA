@@ -90,8 +90,9 @@ def upload_file():
         file.save(path)
         notes_raw_text = get_pdf_text(path)
         resourceId = request.args.get("resourceId");
+        style = get_style_by_resourceid(resourceId);
         set_context_by_resourceid(resourceId, notes_raw_text);
-        set_style_by_resourceid(resourceId, "Bullet Points")
+        set_style_by_resourceid(resourceId, style)
         return jsonify({'message': 'File uploaded successfully', 'filename': filename})
     else:
         return jsonify({'error': 'File upload failed'}), 500
@@ -121,8 +122,8 @@ def getNotes():
     str_text = str(raw_text)
     notes_chunks = get_text_chunks(str_text)
     notes_vs = get_vectorstore(notes_chunks)
-    #style = get_style_by_resourceid(resourceId)
-    notes = generate_notes(notes_vs, "Bullet Points", model)
+    style = get_style_by_resourceid(resourceId)
+    notes = generate_notes(notes_vs, style, model)
     print(notes)
     return notes
 
