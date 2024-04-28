@@ -228,9 +228,6 @@ def handle_userinput(user_question, conversation):
     response = conversation({'question': user_question})
     ai_response = response['chat_history'][-1].content
     # Wrap the response in HTML tags
-    html_response = "<html><body>"
-    html_response += "<p>" + ai_response + "</p>"
-    html_response += "</body></html>"
     return html_response
 
 
