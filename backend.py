@@ -96,7 +96,7 @@ def upload_file():
     else:
         return jsonify({'error': 'File upload failed'}), 500
 
-@app.route('/getNotes', methods=['GET'])
+@app.route('/getAnswers', methods=['GET'])
 def getAnswer():
     print("asdfdas")
     user_question = request.args.get("question")
@@ -111,18 +111,18 @@ def getAnswer():
 
 @app.route('/getNotes', methods=['GET'])
 def getNotes():
+    print()
     load_dotenv()  # Loading environment variables
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     model = ChatOpenAI(openai_api_key=OPENAI_API_KEY, model="gpt-3.5-turbo-0125")
     print("get_notes")
-    db = dbcontroller.DBController();
     resourceId = request.args.get("resourceId");
-    raw_text = db.get_context(resourceId)
+    raw_text = get_context_by_resourceid(resourceId)
     str_text = str(raw_text)
     notes_chunks = get_text_chunks(str_text)
     notes_vs = get_vectorstore(notes_chunks)
-    style = db.get_style(resourceId)
-    notes = generate_notes(notes_vs, style, model)
+    #style = get_style_by_resourceid(resourceId)
+    notes = generate_notes(notes_vs, "Bullet Points", model)
     return jsonify({'message': notes})
 
 
@@ -198,9 +198,6 @@ def handle_userinput(user_question, conversation):
     response = conversation({'question': user_question})
     ai_response = response['chat_history'][-1].content
     return ai_response
-
-
-
 
 
 if __name__ == '__main__':
