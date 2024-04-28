@@ -107,7 +107,7 @@ def getAnswer():
     vectorstore = get_vectorstore(text_chunks)
     conversation = get_conversation_chain(vectorstore)
     answer = handle_userinput(user_question, conversation)
-    return jsonify({'message': answer}) 
+    return answer
 
 @app.route('/getNotes', methods=['GET'])
 def getNotes():
@@ -123,7 +123,8 @@ def getNotes():
     notes_vs = get_vectorstore(notes_chunks)
     #style = get_style_by_resourceid(resourceId)
     notes = generate_notes(notes_vs, "Bullet Points", model)
-    return jsonify({'message': notes})
+    print(notes)
+    return notes
 
 
 @app.route('/')
@@ -165,8 +166,10 @@ def get_vectorstore(text_chunks):
 def generate_notes(contextVS, style, model):
     parser = StrOutputParser()
     template1 = """
-        Generate structured notes for students based on given context, focusing on key topics and using the style provided.
-        Ensure that you are only writing notes about the main topics of the lecture. Return the notes in HTML format, no newline characters only the body.
+        Generate extensive structured notes for students based on given context, focusing on key concepts and using the style provided.
+        Ensure that you are only writing notes about the main topics of the context.
+        Break down any complex ideas that might be hard for students to understand into series of simpler ideas. Write your output in a
+        html.
 
         Context: {context}
         Style: {style}
@@ -197,7 +200,11 @@ def get_conversation_chain(vectorstore):
 def handle_userinput(user_question, conversation):
     response = conversation({'question': user_question})
     ai_response = response['chat_history'][-1].content
-    return ai_response
+    # Wrap the response in HTML tags
+    html_response = "<html><body>"
+    html_response += "<p>" + ai_response + "</p>"
+    html_response += "</body></html>"
+    return html_response
 
 
 if __name__ == '__main__':
